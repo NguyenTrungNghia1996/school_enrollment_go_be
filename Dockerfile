@@ -8,9 +8,14 @@ RUN apk add --no-cache git tzdata
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY . .
+COPY cmd ./cmd
+COPY internal ./internal
+COPY migrations ./migrations
+COPY pkg ./pkg
+COPY docs ./docs
+COPY README.md ./
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api-server ./cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api-server ./cmd/server
 
 # Stage 2: Final image
 FROM alpine:latest
