@@ -1,0 +1,133 @@
+openapi: 3.0.3
+info:
+  title: School Enrollment Backend API
+  version: 1.0.0
+  description: OpenAPI specification for the School Enrollment backend.
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+tags:
+  - name: Health
+    description: Service health check endpoints
+paths:
+  /api/v1/health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check service availability and return application metadata.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Health check successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckSuccessResponse'
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    GenericSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
+        data:
+          type: object
+          nullable: true
+      required:
+        - success
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Bad request
+        error:
+          nullable: true
+      required:
+        - success
+        - message
+    HealthCheckData:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        app:
+          type: string
+          example: school-enrollment-be
+        environment:
+          type: string
+          example: local
+        time:
+          type: string
+          format: date-time
+          example: '2026-04-24T00:00:00Z'
+      required:
+        - status
+        - app
+        - environment
+        - time
+    HealthCheckSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Service is healthy
+        data:
+          $ref: '#/components/schemas/HealthCheckData'
+      required:
+        - success
+        - message
+        - data
