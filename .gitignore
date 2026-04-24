@@ -1,0 +1,31 @@
+# Binaries
+server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test and coverage artifacts
+*.test
+*.out
+coverage.out
+
+# Go workspace and vendoring
+vendor/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Air hot reload
+tmp/
+
+# IDE / editor
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
