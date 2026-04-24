@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+.vscode
+tmp
+vendor
+.env
+.env.local
+.env.*.local
+server
+*.out
+coverage.out
