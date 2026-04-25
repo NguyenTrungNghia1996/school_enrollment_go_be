@@ -11,6 +11,8 @@ tags:
     description: Authentication endpoints for admin users
   - name: Admin Users
     description: Management endpoints for admin users
+  - name: Menus
+    description: Management endpoints for menus by admin
   - name: Users
     description: Management endpoints for end users by admin
   - name: User Auth
@@ -822,6 +824,325 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/menus:
+    get:
+      tags:
+        - Menus
+      summary: List menus
+      description: Retrieve menus with filters and optional pagination.
+      operationId: listMenus
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+        - in: query
+          name: keyword
+          schema:
+            type: string
+            example: dashboard
+        - in: query
+          name: parent_id
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+            example: 0
+        - in: query
+          name: is_active
+          schema:
+            type: boolean
+            example: true
+        - in: query
+          name: paginate
+          schema:
+            type: boolean
+            example: true
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            example: sort_order
+        - in: query
+          name: sort_order
+          schema:
+            type: string
+            enum: [asc, desc]
+            example: asc
+      responses:
+        '200':
+          description: Menus fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuListSuccessResponse'
+        '400':
+          description: Invalid filters or pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Menus
+      summary: Create menu
+      description: Create a new menu.
+      operationId: createMenu
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMenuRequest'
+            example:
+              parent_id: 0
+              title: Dashboard
+              key_code: dashboard
+              icon: home
+              url: /dashboard
+              permission_bit: 1
+              is_active: true
+              sort_order: 1
+      responses:
+        '201':
+          description: Menu created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuSuccessResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: key_code already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/menus/{id}:
+    get:
+      tags:
+        - Menus
+      summary: Get menu detail
+      description: Retrieve a single menu by id.
+      operationId: getMenuById
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdminUserId'
+      responses:
+        '200':
+          description: Menu fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuSuccessResponse'
+        '400':
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Menu not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Menus
+      summary: Update menu
+      description: Update a menu.
+      operationId: updateMenu
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdminUserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMenuRequest'
+            example:
+              parent_id: 0
+              title: Dashboard Updated
+              key_code: dashboard
+              icon: home
+              url: /dashboard
+              permission_bit: 1
+              is_active: true
+              sort_order: 1
+      responses:
+        '200':
+          description: Menu updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuSuccessResponse'
+        '400':
+          description: Invalid request body or id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Menu not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: key_code already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/menus/{id}/status:
+    patch:
+      tags:
+        - Menus
+      summary: Update menu status
+      description: Activate or deactivate a menu.
+      operationId: updateMenuStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdminUserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMenuStatusRequest'
+            example:
+              is_active: false
+      responses:
+        '200':
+          description: Menu status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuSuccessResponse'
+        '400':
+          description: Invalid request body or id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Menu not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/user/auth/login:
     post:
       tags:
@@ -1360,6 +1681,178 @@ components:
           example: Fetched users successfully
         data:
           $ref: '#/components/schemas/UserListData'
+      required:
+        - success
+        - message
+        - data
+    Menu:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        parent_id:
+          type: integer
+          format: int64
+          example: 0
+        title:
+          type: string
+          example: Dashboard
+        key_code:
+          type: string
+          example: dashboard
+        icon:
+          type: string
+          nullable: true
+          example: home
+        url:
+          type: string
+          nullable: true
+          example: /dashboard
+        permission_bit:
+          type: integer
+          nullable: true
+          example: 1
+        is_active:
+          type: boolean
+          example: true
+        sort_order:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - parent_id
+        - title
+        - key_code
+        - is_active
+        - sort_order
+        - created_at
+        - updated_at
+    CreateMenuRequest:
+      type: object
+      properties:
+        parent_id:
+          type: integer
+          format: int64
+          example: 0
+        title:
+          type: string
+          example: Dashboard
+        key_code:
+          type: string
+          example: dashboard
+        icon:
+          type: string
+          nullable: true
+          example: home
+        url:
+          type: string
+          nullable: true
+          example: /dashboard
+        permission_bit:
+          type: integer
+          nullable: true
+          example: 1
+        is_active:
+          type: boolean
+          example: true
+        sort_order:
+          type: integer
+          example: 1
+      required:
+        - parent_id
+        - title
+        - key_code
+        - sort_order
+    UpdateMenuRequest:
+      type: object
+      properties:
+        parent_id:
+          type: integer
+          format: int64
+          example: 0
+        title:
+          type: string
+          example: Dashboard Updated
+        key_code:
+          type: string
+          example: dashboard
+        icon:
+          type: string
+          nullable: true
+          example: home
+        url:
+          type: string
+          nullable: true
+          example: /dashboard
+        permission_bit:
+          type: integer
+          nullable: true
+          example: 1
+        is_active:
+          type: boolean
+          example: true
+        sort_order:
+          type: integer
+          example: 1
+      required:
+        - parent_id
+        - title
+        - key_code
+        - sort_order
+    UpdateMenuStatusRequest:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+          example: false
+      required:
+        - is_active
+    MenuListData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Menu'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      required:
+        - items
+        - pagination
+    MenuSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Created menu successfully
+        data:
+          $ref: '#/components/schemas/Menu'
+      required:
+        - success
+        - message
+        - data
+    MenuListSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Fetched menus successfully
+        data:
+          $ref: '#/components/schemas/MenuListData'
       required:
         - success
         - message
