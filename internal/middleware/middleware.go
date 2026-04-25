@@ -8,7 +8,7 @@ import (
 	fibercors "github.com/gofiber/fiber/v2/middleware/cors"
 	fiberrecover "github.com/gofiber/fiber/v2/middleware/recover"
 
-	"school_enrollment_be/internal/common/response"
+	"school_enrollment_be/internal/common"
 	"school_enrollment_be/internal/config"
 )
 
@@ -65,6 +65,6 @@ func FiberErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 			"error", err,
 		)
 
-		return response.Error(c, code, message, nil)
+		return common.Error(c, code, common.NewError("REQUEST_FAILED", message, nil))
 	}
 }

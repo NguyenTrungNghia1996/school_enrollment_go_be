@@ -6,7 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"school_enrollment_be/internal/common/response"
+	"school_enrollment_be/internal/common"
 	"school_enrollment_be/internal/config"
 	"school_enrollment_be/internal/database"
 )
@@ -42,7 +42,7 @@ func (h *Handler) Check(c *fiber.Ctx) error {
 		message = "Service is unhealthy"
 	}
 
-	return response.Success(c, statusCode, message, fiber.Map{
+	return common.Success(c, statusCode, message, fiber.Map{
 		"app": fiber.Map{
 			"name":        h.cfg.App.Name,
 			"environment": h.cfg.App.Env,
