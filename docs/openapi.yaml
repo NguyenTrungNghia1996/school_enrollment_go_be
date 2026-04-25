@@ -7,9 +7,92 @@ servers:
   - url: http://localhost:8080
     description: Local development server
 tags:
+  - name: Admin Auth
+    description: Authentication endpoints for admin users
   - name: Health
     description: Service health check endpoints
 paths:
+  /api/v1/admin/auth/login:
+    post:
+      tags:
+        - Admin Auth
+      summary: Admin login
+      description: Authenticate an admin user with username and password.
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminLoginRequest'
+            example:
+              username: admin
+              password: admin
+      responses:
+        '200':
+          description: Admin login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminLoginSuccessResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/auth/me:
+    get:
+      tags:
+        - Admin Auth
+      summary: Get current admin profile
+      description: Retrieve the current authenticated admin profile from an admin bearer token.
+      operationId: getAdminMe
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Admin profile fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMeSuccessResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/health:
     get:
       tags:
@@ -43,6 +126,18 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    AdminLoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: admin
+        password:
+          type: string
+          example: admin
+      required:
+        - username
+        - password
     GenericSuccessResponse:
       type: object
       properties:
@@ -63,14 +158,99 @@ components:
         success:
           type: boolean
           example: false
+        error:
+          $ref: '#/components/schemas/APIError'
+      required:
+        - success
+        - error
+    APIError:
+      type: object
+      properties:
+        code:
+          type: string
+          example: INVALID_CREDENTIALS
         message:
           type: string
-          example: Bad request
-        error:
+          example: Username or password is incorrect
+        details:
           nullable: true
+      required:
+        - code
+        - message
+    AdminProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        username:
+          type: string
+          example: admin
+        full_name:
+          type: string
+          example: Default Admin
+        email:
+          type: string
+          nullable: true
+          example: admin@example.com
+        phone_number:
+          type: string
+          nullable: true
+          example: "0900000000"
+        is_super_admin:
+          type: boolean
+          example: true
+        is_active:
+          type: boolean
+          example: true
+      required:
+        - id
+        - username
+        - full_name
+        - is_super_admin
+        - is_active
+    AdminLoginData:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        admin:
+          $ref: '#/components/schemas/AdminProfile'
+      required:
+        - access_token
+        - admin
+    AdminLoginSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Admin login successful
+        data:
+          $ref: '#/components/schemas/AdminLoginData'
       required:
         - success
         - message
+        - data
+    AdminMeSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Fetched admin profile successfully
+        data:
+          $ref: '#/components/schemas/AdminProfile'
+      required:
+        - success
+        - message
+        - data
     HealthCheckApp:
       type: object
       properties:
