@@ -36,6 +36,7 @@ type DatabaseConfig struct {
 	MaxOpenConns      int
 	ConnMaxLifetime   time.Duration
 	EnableAutoMigrate bool
+	EnableDefaultSeed bool
 }
 
 type AuthConfig struct {
@@ -79,6 +80,7 @@ func Load() (*Config, error) {
 			MaxOpenConns:      getIntEnv("DB_MAX_OPEN_CONNS", 50, &validationErrors),
 			ConnMaxLifetime:   getDurationEnv("DB_CONN_MAX_LIFETIME", 30*time.Minute, &validationErrors),
 			EnableAutoMigrate: getBoolEnv("DB_ENABLE_AUTO_MIGRATE", false, &validationErrors),
+			EnableDefaultSeed: getBoolEnv("DB_ENABLE_DEFAULT_SEED", false, &validationErrors),
 		},
 		Auth: AuthConfig{
 			AdminJWT: JWTConfig{

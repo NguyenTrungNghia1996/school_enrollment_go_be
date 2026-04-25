@@ -20,6 +20,22 @@ func (AdminUser) TableName() string {
 	return "admin_users"
 }
 
+type User struct {
+	ID           int64     `gorm:"column:id;primaryKey;autoIncrement"`
+	Username     string    `gorm:"column:username;type:varchar(50);not null;uniqueIndex"`
+	PasswordHash string    `gorm:"column:password_hash;type:varchar(255);not null"`
+	FullName     string    `gorm:"column:full_name;type:varchar(100);not null"`
+	Email        *string   `gorm:"column:email;type:varchar(100);uniqueIndex"`
+	PhoneNumber  *string   `gorm:"column:phone_number;type:varchar(20)"`
+	IsActive     bool      `gorm:"column:is_active;not null;default:true;index"`
+	CreatedAt    time.Time `gorm:"column:created_at;not null;default:now()"`
+	UpdatedAt    time.Time `gorm:"column:updated_at;not null;default:now()"`
+}
+
+func (User) TableName() string {
+	return "users"
+}
+
 type RoleGroup struct {
 	ID          int64                 `gorm:"column:id;primaryKey;autoIncrement"`
 	Code        string                `gorm:"column:code;type:varchar(50);not null;uniqueIndex"`
@@ -82,6 +98,7 @@ func (Menu) TableName() string {
 func AutoMigrateModels() []interface{} {
 	return []interface{}{
 		&AdminUser{},
+		&User{},
 		&RoleGroup{},
 		&AdminUserRoleGroup{},
 		&RoleGroupPermission{},
