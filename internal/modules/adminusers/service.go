@@ -17,6 +17,7 @@ var (
 	ErrActorAdminInactive         = errors.New("actor admin user is inactive")
 	ErrUsernameAlreadyExists      = errors.New("username already exists")
 	ErrEmailAlreadyExists         = errors.New("email already exists")
+	ErrRoleGroupNotFound          = errors.New("role group not found")
 	ErrCannotDeactivateSelf       = errors.New("cannot deactivate self")
 	ErrCannotDeactivateSuperAdmin = errors.New("cannot deactivate super admin")
 	ErrForbiddenSuperAdminChange  = errors.New("only super admin can change is_super_admin")
@@ -53,6 +54,7 @@ type CreateAdminUserInput struct {
 	PhoneNumber  *string
 	IsSuperAdmin *bool
 	IsActive     *bool
+	RoleGroupIDs []int64
 }
 
 type UpdateAdminUserInput struct {
@@ -62,18 +64,26 @@ type UpdateAdminUserInput struct {
 	PhoneNumber  *string
 	IsSuperAdmin *bool
 	IsActive     *bool
+	RoleGroupIDs []int64
 }
 
 type AdminUserResponse struct {
-	ID           int64      `json:"id"`
-	Username     string     `json:"username"`
-	FullName     string     `json:"full_name"`
-	Email        *string    `json:"email,omitempty"`
-	PhoneNumber  *string    `json:"phone_number,omitempty"`
-	IsSuperAdmin bool       `json:"is_super_admin"`
-	IsActive     bool       `json:"is_active"`
-	CreatedAt    *time.Time `json:"created_at,omitempty"`
-	UpdatedAt    *time.Time `json:"updated_at,omitempty"`
+	ID           int64               `json:"id"`
+	Username     string              `json:"username"`
+	FullName     string              `json:"full_name"`
+	Email        *string             `json:"email,omitempty"`
+	PhoneNumber  *string             `json:"phone_number,omitempty"`
+	IsSuperAdmin bool                `json:"is_super_admin"`
+	IsActive     bool                `json:"is_active"`
+	RoleGroups   []RoleGroupResponse `json:"role_groups"`
+	CreatedAt    *time.Time          `json:"created_at,omitempty"`
+	UpdatedAt    *time.Time          `json:"updated_at,omitempty"`
+}
+
+type RoleGroupResponse struct {
+	ID   int64  `json:"id"`
+	Code string `json:"code"`
+	Name string `json:"name"`
 }
 
 func NewService(repo Repository, passwordHasher security.PasswordHasher) Service {
@@ -156,6 +166,11 @@ func (s *service) Create(actorID int64, input CreateAdminUserInput) (*AdminUserR
 		return nil, err
 	}
 
+	roleGroups, err := s.resolveRoleGroups(input.RoleGroupIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	passwordHash, err := s.passwordHasher.Hash(password)
 	if err != nil {
 		return nil, fmt.Errorf("hash admin user password: %w", err)
@@ -171,7 +186,7 @@ func (s *service) Create(actorID int64, input CreateAdminUserInput) (*AdminUserR
 		IsActive:     isActive,
 	}
 
-	if err := s.repo.Create(adminUser); err != nil {
+	if err := s.repo.CreateWithRoleGroups(adminUser, roleGroups); err != nil {
 		return nil, err
 	}
 
@@ -218,6 +233,11 @@ func (s *service) Update(actorID, id int64, input UpdateAdminUserInput) (*AdminU
 		return nil, err
 	}
 
+	roleGroups, err := s.resolveRoleGroups(input.RoleGroupIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	adminUser.Username = username
 	adminUser.FullName = fullName
 	adminUser.Email = email
@@ -231,7 +251,7 @@ func (s *service) Update(actorID, id int64, input UpdateAdminUserInput) (*AdminU
 		adminUser.IsActive = *input.IsActive
 	}
 
-	if err := s.repo.Save(adminUser); err != nil {
+	if err := s.repo.SaveWithRoleGroups(adminUser, roleGroups); err != nil {
 		return nil, err
 	}
 
@@ -259,7 +279,7 @@ func (s *service) UpdateStatus(actorID, id int64, isActive bool) (*AdminUserResp
 	}
 
 	adminUser.IsActive = isActive
-	if err := s.repo.Save(adminUser); err != nil {
+	if err := s.repo.SaveWithRoleGroups(adminUser, adminUser.RoleGroups); err != nil {
 		return nil, err
 	}
 
@@ -288,7 +308,7 @@ func (s *service) ResetPassword(actorID, id int64, newPassword string) (*AdminUs
 	}
 
 	adminUser.PasswordHash = passwordHash
-	if err := s.repo.Save(adminUser); err != nil {
+	if err := s.repo.SaveWithRoleGroups(adminUser, adminUser.RoleGroups); err != nil {
 		return nil, err
 	}
 
@@ -349,7 +369,46 @@ func normalizeOptionalString(value *string) *string {
 	return &trimmed
 }
 
+func (s *service) resolveRoleGroups(ids []int64) ([]database.RoleGroup, error) {
+	if len(ids) == 0 {
+		return []database.RoleGroup{}, nil
+	}
+
+	uniqueIDs := make([]int64, 0, len(ids))
+	seen := make(map[int64]struct{}, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			return nil, ErrRoleGroupNotFound
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniqueIDs = append(uniqueIDs, id)
+	}
+
+	roleGroups, err := s.repo.FindRoleGroupsByIDs(uniqueIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(roleGroups) != len(uniqueIDs) {
+		return nil, ErrRoleGroupNotFound
+	}
+
+	return roleGroups, nil
+}
+
 func toAdminUserResponse(adminUser *database.AdminUser) AdminUserResponse {
+	roleGroups := make([]RoleGroupResponse, 0, len(adminUser.RoleGroups))
+	for _, roleGroup := range adminUser.RoleGroups {
+		roleGroups = append(roleGroups, RoleGroupResponse{
+			ID:   roleGroup.ID,
+			Code: roleGroup.Code,
+			Name: roleGroup.Name,
+		})
+	}
+
 	return AdminUserResponse{
 		ID:           adminUser.ID,
 		Username:     adminUser.Username,
@@ -358,6 +417,7 @@ func toAdminUserResponse(adminUser *database.AdminUser) AdminUserResponse {
 		PhoneNumber:  adminUser.PhoneNumber,
 		IsSuperAdmin: adminUser.IsSuperAdmin,
 		IsActive:     adminUser.IsActive,
+		RoleGroups:   roleGroups,
 		CreatedAt:    &adminUser.CreatedAt,
 		UpdatedAt:    &adminUser.UpdatedAt,
 	}

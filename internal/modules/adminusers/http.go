@@ -28,6 +28,7 @@ type CreateAdminUserRequest struct {
 	PhoneNumber  *string `json:"phone_number"`
 	IsSuperAdmin *bool   `json:"is_super_admin"`
 	IsActive     *bool   `json:"is_active"`
+	RoleGroupIDs []int64 `json:"role_group_ids"`
 }
 
 type UpdateAdminUserRequest struct {
@@ -37,6 +38,7 @@ type UpdateAdminUserRequest struct {
 	PhoneNumber  *string `json:"phone_number"`
 	IsSuperAdmin *bool   `json:"is_super_admin"`
 	IsActive     *bool   `json:"is_active"`
+	RoleGroupIDs []int64 `json:"role_group_ids"`
 }
 
 type UpdateStatusRequest struct {
@@ -128,6 +130,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 		PhoneNumber:  req.PhoneNumber,
 		IsSuperAdmin: req.IsSuperAdmin,
 		IsActive:     req.IsActive,
+		RoleGroupIDs: req.RoleGroupIDs,
 	})
 	if svcErr != nil {
 		return handleServiceError(c, svcErr)
@@ -159,6 +162,7 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 		PhoneNumber:  req.PhoneNumber,
 		IsSuperAdmin: req.IsSuperAdmin,
 		IsActive:     req.IsActive,
+		RoleGroupIDs: req.RoleGroupIDs,
 	})
 	if svcErr != nil {
 		return handleServiceError(c, svcErr)
@@ -279,6 +283,8 @@ func handleServiceError(c *fiber.Ctx, err error) error {
 		return common.Error(c, fiber.StatusConflict, common.NewError("USERNAME_ALREADY_EXISTS", "username already exists", nil))
 	case errors.Is(err, ErrEmailAlreadyExists):
 		return common.Error(c, fiber.StatusConflict, common.NewError("EMAIL_ALREADY_EXISTS", "email already exists", nil))
+	case errors.Is(err, ErrRoleGroupNotFound):
+		return common.Error(c, fiber.StatusBadRequest, common.NewError("ROLE_GROUP_NOT_FOUND", "one or more role groups were not found", nil))
 	case errors.Is(err, ErrCannotDeactivateSelf):
 		return common.Error(c, fiber.StatusForbidden, common.NewError("CANNOT_DEACTIVATE_SELF", "you cannot deactivate your own account", nil))
 	case errors.Is(err, ErrCannotDeactivateSuperAdmin):

@@ -205,6 +205,7 @@ paths:
               phone_number: "0900000002"
               is_super_admin: false
               is_active: true
+              role_group_ids: [1, 2]
       responses:
         '201':
           description: Admin user created successfully
@@ -313,6 +314,7 @@ paths:
               phone_number: "0900000003"
               is_super_admin: false
               is_active: true
+              role_group_ids: [1, 2]
       responses:
         '200':
           description: Admin user updated successfully
@@ -1697,6 +1699,10 @@ components:
         is_active:
           type: boolean
           example: true
+        role_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUserRoleGroup'
         created_at:
           type: string
           format: date-time
@@ -1709,8 +1715,26 @@ components:
         - full_name
         - is_super_admin
         - is_active
+        - role_groups
         - created_at
         - updated_at
+    AdminUserRoleGroup:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        code:
+          type: string
+          example: admin
+        name:
+          type: string
+          example: Administrator
+      required:
+        - id
+        - code
+        - name
     CreateAdminUserRequest:
       type: object
       properties:
@@ -1737,6 +1761,12 @@ components:
         is_active:
           type: boolean
           example: true
+        role_group_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+          example: [1, 2]
       required:
         - username
         - password
@@ -1764,6 +1794,12 @@ components:
         is_active:
           type: boolean
           example: true
+        role_group_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+          example: [1, 2]
       required:
         - username
         - full_name

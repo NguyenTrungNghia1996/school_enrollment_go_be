@@ -16,8 +16,9 @@ type Repository interface {
 	List(filter ListFilter, pagination common.PaginationQuery) ([]database.AdminUser, int64, error)
 	UsernameExists(username string, excludeID int64) (bool, error)
 	EmailExists(email string, excludeID int64) (bool, error)
-	Create(adminUser *database.AdminUser) error
-	Save(adminUser *database.AdminUser) error
+	FindRoleGroupsByIDs(ids []int64) ([]database.RoleGroup, error)
+	CreateWithRoleGroups(adminUser *database.AdminUser, roleGroups []database.RoleGroup) error
+	SaveWithRoleGroups(adminUser *database.AdminUser, roleGroups []database.RoleGroup) error
 }
 
 type repository struct {
@@ -30,7 +31,7 @@ func NewRepository(db *database.Database) Repository {
 
 func (r *repository) FindByID(id int64) (*database.AdminUser, error) {
 	var adminUser database.AdminUser
-	if err := r.db.First(&adminUser, "id = ?", id).Error; err != nil {
+	if err := r.db.Preload("RoleGroups").First(&adminUser, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrAdminUserNotFound
 		}
@@ -70,7 +71,7 @@ func (r *repository) List(filter ListFilter, pagination common.PaginationQuery) 
 	orderBy := buildOrderBy(pagination)
 
 	var items []database.AdminUser
-	if err := query.Order(orderBy).Offset(pagination.Offset()).Limit(pagination.PageSize).Find(&items).Error; err != nil {
+	if err := query.Preload("RoleGroups").Order(orderBy).Offset(pagination.Offset()).Limit(pagination.PageSize).Find(&items).Error; err != nil {
 		return nil, 0, fmt.Errorf("list admin users: %w", err)
 	}
 
@@ -105,20 +106,47 @@ func (r *repository) EmailExists(email string, excludeID int64) (bool, error) {
 	return count > 0, nil
 }
 
-func (r *repository) Create(adminUser *database.AdminUser) error {
-	if err := r.db.Create(adminUser).Error; err != nil {
-		return fmt.Errorf("create admin user: %w", err)
+func (r *repository) FindRoleGroupsByIDs(ids []int64) ([]database.RoleGroup, error) {
+	if len(ids) == 0 {
+		return []database.RoleGroup{}, nil
 	}
 
-	return nil
+	var roleGroups []database.RoleGroup
+	if err := r.db.Where("id IN ?", ids).Find(&roleGroups).Error; err != nil {
+		return nil, fmt.Errorf("find role groups by ids: %w", err)
+	}
+
+	return roleGroups, nil
 }
 
-func (r *repository) Save(adminUser *database.AdminUser) error {
-	if err := r.db.Save(adminUser).Error; err != nil {
-		return fmt.Errorf("save admin user: %w", err)
-	}
+func (r *repository) CreateWithRoleGroups(adminUser *database.AdminUser, roleGroups []database.RoleGroup) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(adminUser).Error; err != nil {
+			return fmt.Errorf("create admin user: %w", err)
+		}
 
-	return nil
+		if err := tx.Model(adminUser).Association("RoleGroups").Replace(roleGroups); err != nil {
+			return fmt.Errorf("replace admin user role groups: %w", err)
+		}
+
+		adminUser.RoleGroups = roleGroups
+		return nil
+	})
+}
+
+func (r *repository) SaveWithRoleGroups(adminUser *database.AdminUser, roleGroups []database.RoleGroup) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(adminUser).Error; err != nil {
+			return fmt.Errorf("save admin user: %w", err)
+		}
+
+		if err := tx.Model(adminUser).Association("RoleGroups").Replace(roleGroups); err != nil {
+			return fmt.Errorf("replace admin user role groups: %w", err)
+		}
+
+		adminUser.RoleGroups = roleGroups
+		return nil
+	})
 }
 
 func buildOrderBy(pagination common.PaginationQuery) string {

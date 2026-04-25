@@ -86,6 +86,18 @@ func (f *fakeAdminRepository) Save(adminUser *database.AdminUser) error {
 	return nil
 }
 
+func (f *fakeAdminRepository) FindRoleGroupsByIDs(ids []int64) ([]database.RoleGroup, error) {
+	return nil, nil
+}
+
+func (f *fakeAdminRepository) CreateWithRoleGroups(adminUser *database.AdminUser, roleGroups []database.RoleGroup) error {
+	return nil
+}
+
+func (f *fakeAdminRepository) SaveWithRoleGroups(adminUser *database.AdminUser, roleGroups []database.RoleGroup) error {
+	return nil
+}
+
 func TestCreateRejectsDuplicateUsername(t *testing.T) {
 	repo := &fakeRepository{
 		users:             map[int64]*database.User{},

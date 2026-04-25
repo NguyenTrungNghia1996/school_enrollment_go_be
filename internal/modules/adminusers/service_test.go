@@ -14,6 +14,7 @@ type fakeRepository struct {
 	adminUsers        map[int64]*database.AdminUser
 	usernameConflicts map[string]int64
 	emailConflicts    map[string]int64
+	roleGroups        map[int64]database.RoleGroup
 }
 
 func (f *fakeRepository) FindByID(id int64) (*database.AdminUser, error) {
@@ -43,12 +44,34 @@ func (f *fakeRepository) EmailExists(email string, excludeID int64) (bool, error
 }
 
 func (f *fakeRepository) Create(adminUser *database.AdminUser) error {
+	panic("unused")
+}
+
+func (f *fakeRepository) Save(adminUser *database.AdminUser) error {
+	panic("unused")
+}
+
+func (f *fakeRepository) FindRoleGroupsByIDs(ids []int64) ([]database.RoleGroup, error) {
+	items := make([]database.RoleGroup, 0, len(ids))
+	for _, id := range ids {
+		roleGroup, ok := f.roleGroups[id]
+		if !ok {
+			continue
+		}
+		items = append(items, roleGroup)
+	}
+	return items, nil
+}
+
+func (f *fakeRepository) CreateWithRoleGroups(adminUser *database.AdminUser, roleGroups []database.RoleGroup) error {
 	adminUser.ID = int64(len(f.adminUsers) + 1)
+	adminUser.RoleGroups = roleGroups
 	f.adminUsers[adminUser.ID] = adminUser
 	return nil
 }
 
-func (f *fakeRepository) Save(adminUser *database.AdminUser) error {
+func (f *fakeRepository) SaveWithRoleGroups(adminUser *database.AdminUser, roleGroups []database.RoleGroup) error {
+	adminUser.RoleGroups = roleGroups
 	f.adminUsers[adminUser.ID] = adminUser
 	return nil
 }
@@ -60,6 +83,7 @@ func TestCreateRejectsDuplicateUsername(t *testing.T) {
 		},
 		usernameConflicts: map[string]int64{"existing": 2},
 		emailConflicts:    map[string]int64{},
+		roleGroups:        map[int64]database.RoleGroup{},
 	}
 
 	service := NewService(repo, security.NewPasswordHasher(0))
@@ -81,6 +105,7 @@ func TestUpdateRejectsSelfDeactivate(t *testing.T) {
 		},
 		usernameConflicts: map[string]int64{},
 		emailConflicts:    map[string]int64{},
+		roleGroups:        map[int64]database.RoleGroup{},
 	}
 
 	service := NewService(repo, security.NewPasswordHasher(0))
@@ -104,6 +129,7 @@ func TestUpdateRejectsSuperAdminChangeByNonSuperAdmin(t *testing.T) {
 		},
 		usernameConflicts: map[string]int64{},
 		emailConflicts:    map[string]int64{},
+		roleGroups:        map[int64]database.RoleGroup{},
 	}
 
 	service := NewService(repo, security.NewPasswordHasher(0))
@@ -127,6 +153,7 @@ func TestUpdateRejectsDeactivateSuperAdmin(t *testing.T) {
 		},
 		usernameConflicts: map[string]int64{},
 		emailConflicts:    map[string]int64{},
+		roleGroups:        map[int64]database.RoleGroup{},
 	}
 
 	service := NewService(repo, security.NewPasswordHasher(0))
@@ -189,5 +216,34 @@ func TestResetPasswordUpdatesPasswordHash(t *testing.T) {
 
 	if err := hasher.Compare(repo.adminUsers[2].PasswordHash, "new-secret"); err != nil {
 		t.Fatalf("Compare() error = %v", err)
+	}
+}
+
+func TestCreateAssignsRoleGroups(t *testing.T) {
+	repo := &fakeRepository{
+		adminUsers: map[int64]*database.AdminUser{
+			1: {ID: 1, Username: "root", FullName: "Root", IsSuperAdmin: true, IsActive: true},
+		},
+		usernameConflicts: map[string]int64{},
+		emailConflicts:    map[string]int64{},
+		roleGroups: map[int64]database.RoleGroup{
+			10: {ID: 10, Code: "admin", Name: "Admin"},
+			11: {ID: 11, Code: "staff", Name: "Staff"},
+		},
+	}
+
+	service := NewService(repo, security.NewPasswordHasher(0))
+	item, err := service.Create(1, CreateAdminUserInput{
+		Username:     "manager",
+		Password:     "secret",
+		FullName:     "Manager",
+		RoleGroupIDs: []int64{10, 11},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	if len(item.RoleGroups) != 2 {
+		t.Fatalf("role_groups len = %d, want %d", len(item.RoleGroups), 2)
 	}
 }
