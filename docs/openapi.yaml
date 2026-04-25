@@ -11,6 +11,8 @@ tags:
     description: Authentication endpoints for admin users
   - name: Admin Users
     description: Management endpoints for admin users
+  - name: Users
+    description: Management endpoints for end users by admin
   - name: User Auth
     description: Authentication endpoints for end users
   - name: Health
@@ -462,6 +464,364 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/users:
+    get:
+      tags:
+        - Users
+      summary: List users
+      description: Retrieve users with filters and pagination.
+      operationId: listUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            example: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 20
+        - in: query
+          name: keyword
+          schema:
+            type: string
+            example: student
+        - in: query
+          name: is_active
+          schema:
+            type: boolean
+            example: true
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            example: created_at
+        - in: query
+          name: sort_order
+          schema:
+            type: string
+            enum: [asc, desc]
+            example: desc
+      responses:
+        '200':
+          description: Users fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListSuccessResponse'
+        '400':
+          description: Invalid filters or pagination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Users
+      summary: Create user
+      description: Create a new user.
+      operationId: createUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            example:
+              username: student01
+              password: secret123
+              full_name: Student 01
+              email: student01@example.com
+              phone_number: "0900000010"
+              is_active: true
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSuccessResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user detail
+      description: Retrieve a single user by id.
+      operationId: getUserById
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdminUserId'
+      responses:
+        '200':
+          description: User fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSuccessResponse'
+        '400':
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Users
+      summary: Update user
+      description: Update a user without changing the password.
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdminUserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+            example:
+              username: student01
+              full_name: Student Updated
+              email: student01@example.com
+              phone_number: "0900000011"
+              is_active: true
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSuccessResponse'
+        '400':
+          description: Invalid request body or id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/users/{id}/status:
+    patch:
+      tags:
+        - Users
+      summary: Update user status
+      description: Activate or deactivate a user.
+      operationId: updateUserStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdminUserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserStatusRequest'
+            example:
+              is_active: false
+      responses:
+        '200':
+          description: User status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSuccessResponse'
+        '400':
+          description: Invalid request body or id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/users/{id}/reset-password:
+    patch:
+      tags:
+        - Users
+      summary: Reset user password
+      description: Reset password for a user.
+      operationId: resetUserPassword
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AdminUserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetUserPasswordRequest'
+            example:
+              new_password: newSecret123
+      responses:
+        '200':
+          description: User password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSuccessResponse'
+        '400':
+          description: Invalid request body or id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/user/auth/login:
     post:
       tags:
@@ -855,6 +1215,151 @@ components:
           example: Fetched admin users successfully
         data:
           $ref: '#/components/schemas/AdminUserListData'
+      required:
+        - success
+        - message
+        - data
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        username:
+          type: string
+          example: student01
+        full_name:
+          type: string
+          example: Student 01
+        email:
+          type: string
+          nullable: true
+          example: student01@example.com
+        phone_number:
+          type: string
+          nullable: true
+          example: "0900000010"
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - full_name
+        - is_active
+        - created_at
+        - updated_at
+    CreateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: student01
+        password:
+          type: string
+          example: secret123
+        full_name:
+          type: string
+          example: Student 01
+        email:
+          type: string
+          nullable: true
+          example: student01@example.com
+        phone_number:
+          type: string
+          nullable: true
+          example: "0900000010"
+        is_active:
+          type: boolean
+          example: true
+      required:
+        - username
+        - password
+        - full_name
+    UpdateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: student01
+        full_name:
+          type: string
+          example: Student Updated
+        email:
+          type: string
+          nullable: true
+          example: student01@example.com
+        phone_number:
+          type: string
+          nullable: true
+          example: "0900000011"
+        is_active:
+          type: boolean
+          example: true
+      required:
+        - username
+        - full_name
+    UpdateUserStatusRequest:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+          example: false
+      required:
+        - is_active
+    ResetUserPasswordRequest:
+      type: object
+      properties:
+        new_password:
+          type: string
+          example: newSecret123
+      required:
+        - new_password
+    UserListData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+      required:
+        - items
+        - pagination
+    UserSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Created user successfully
+        data:
+          $ref: '#/components/schemas/User'
+      required:
+        - success
+        - message
+        - data
+    UserListSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Fetched users successfully
+        data:
+          $ref: '#/components/schemas/UserListData'
       required:
         - success
         - message
