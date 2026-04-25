@@ -26,12 +26,16 @@ type AppConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Name     string
-	SSLMode  string
+	Host              string
+	Port              string
+	User              string
+	Password          string
+	Name              string
+	SSLMode           string
+	MaxIdleConns      int
+	MaxOpenConns      int
+	ConnMaxLifetime   time.Duration
+	EnableAutoMigrate bool
 }
 
 type AuthConfig struct {
@@ -65,12 +69,16 @@ func Load() (*Config, error) {
 			Location: location,
 		},
 		Database: DatabaseConfig{
-			Host:     requiredEnv("DB_HOST", &validationErrors),
-			Port:     requiredEnv("DB_PORT", &validationErrors),
-			User:     requiredEnv("DB_USER", &validationErrors),
-			Password: requiredEnv("DB_PASSWORD", &validationErrors),
-			Name:     requiredEnv("DB_NAME", &validationErrors),
-			SSLMode:  requiredEnv("DB_SSLMODE", &validationErrors),
+			Host:              requiredEnv("DB_HOST", &validationErrors),
+			Port:              requiredEnv("DB_PORT", &validationErrors),
+			User:              requiredEnv("DB_USER", &validationErrors),
+			Password:          requiredEnv("DB_PASSWORD", &validationErrors),
+			Name:              requiredEnv("DB_NAME", &validationErrors),
+			SSLMode:           requiredEnv("DB_SSLMODE", &validationErrors),
+			MaxIdleConns:      getIntEnv("DB_MAX_IDLE_CONNS", 10, &validationErrors),
+			MaxOpenConns:      getIntEnv("DB_MAX_OPEN_CONNS", 50, &validationErrors),
+			ConnMaxLifetime:   getDurationEnv("DB_CONN_MAX_LIFETIME", 30*time.Minute, &validationErrors),
+			EnableAutoMigrate: getBoolEnv("DB_ENABLE_AUTO_MIGRATE", false, &validationErrors),
 		},
 		Auth: AuthConfig{
 			AdminJWT: JWTConfig{
@@ -113,6 +121,22 @@ func (c *Config) Validate() error {
 		validationErrors = append(validationErrors, "CORS_ALLOW_ORIGINS is required")
 	}
 
+	if c.Database.MaxIdleConns < 0 {
+		validationErrors = append(validationErrors, "DB_MAX_IDLE_CONNS must be greater than or equal to 0")
+	}
+
+	if c.Database.MaxOpenConns <= 0 {
+		validationErrors = append(validationErrors, "DB_MAX_OPEN_CONNS must be greater than 0")
+	}
+
+	if c.Database.MaxIdleConns > c.Database.MaxOpenConns {
+		validationErrors = append(validationErrors, "DB_MAX_IDLE_CONNS must be less than or equal to DB_MAX_OPEN_CONNS")
+	}
+
+	if c.Database.ConnMaxLifetime < 0 {
+		validationErrors = append(validationErrors, "DB_CONN_MAX_LIFETIME must be greater than or equal to 0")
+	}
+
 	if len(validationErrors) > 0 {
 		return errors.New(strings.Join(validationErrors, "; "))
 	}
@@ -143,6 +167,53 @@ func requiredDuration(key string, validationErrors *[]string) time.Duration {
 	}
 
 	return duration
+}
+
+func getIntEnv(key string, fallback int, validationErrors *[]string) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+
+	var parsed int
+	if _, err := fmt.Sscanf(value, "%d", &parsed); err != nil {
+		*validationErrors = append(*validationErrors, fmt.Sprintf("%s must be a valid integer", key))
+		return fallback
+	}
+
+	return parsed
+}
+
+func getDurationEnv(key string, fallback time.Duration, validationErrors *[]string) time.Duration {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		*validationErrors = append(*validationErrors, fmt.Sprintf("%s must be a valid duration", key))
+		return fallback
+	}
+
+	return duration
+}
+
+func getBoolEnv(key string, fallback bool, validationErrors *[]string) bool {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+
+	switch strings.ToLower(value) {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		*validationErrors = append(*validationErrors, fmt.Sprintf("%s must be a valid boolean", key))
+		return fallback
+	}
 }
 
 func parseLocation(key, value string, validationErrors *[]string) *time.Location {

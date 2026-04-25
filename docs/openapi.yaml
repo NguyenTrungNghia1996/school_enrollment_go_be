@@ -15,7 +15,7 @@ paths:
       tags:
         - Health
       summary: Health check
-      description: Check service availability and return application metadata.
+      description: Check service availability and return application and database health.
       operationId: getHealth
       responses:
         '200':
@@ -24,36 +24,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthCheckSuccessResponse'
-        '201':
-          description: Created
+        '503':
+          description: Health check failed because the database is unavailable
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GenericSuccessResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/HealthCheckSuccessResponse'
         '500':
           description: Internal server error
           content:
@@ -95,27 +71,45 @@ components:
       required:
         - success
         - message
-    HealthCheckData:
+    HealthCheckApp:
       type: object
       properties:
-        status:
-          type: string
-          example: ok
-        app:
+        name:
           type: string
           example: school-enrollment-be
         environment:
           type: string
           example: local
+        status:
+          type: string
+          example: ok
         time:
           type: string
           format: date-time
           example: '2026-04-24T00:00:00Z'
       required:
-        - status
-        - app
+        - name
         - environment
+        - status
         - time
+    HealthCheckDB:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+      required:
+        - status
+    HealthCheckData:
+      type: object
+      properties:
+        app:
+          $ref: '#/components/schemas/HealthCheckApp'
+        db:
+          $ref: '#/components/schemas/HealthCheckDB'
+      required:
+        - app
+        - db
     HealthCheckSuccessResponse:
       type: object
       properties:
