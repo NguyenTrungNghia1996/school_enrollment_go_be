@@ -103,6 +103,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/admin/auth/permissions:
+    get:
+      tags:
+        - Admin Auth
+      summary: Get merged admin permissions
+      description: Retrieve merged admin permissions by permission_key using bitwise OR across all assigned role groups.
+      operationId: getAdminPermissions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Admin permissions fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPermissionsSuccessResponse'
+        '401':
+          description: Missing or invalid admin token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/admin/admin-users:
     get:
       tags:
@@ -2376,6 +2410,36 @@ components:
           example: Fetched admin profile successfully
         data:
           $ref: '#/components/schemas/AdminProfile'
+      required:
+        - success
+        - message
+        - data
+    AdminPermission:
+      type: object
+      properties:
+        permission_key:
+          type: string
+          example: menus
+        permission_value:
+          type: integer
+          format: int64
+          example: 7
+      required:
+        - permission_key
+        - permission_value
+    AdminPermissionsSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Fetched admin permissions successfully
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminPermission'
       required:
         - success
         - message

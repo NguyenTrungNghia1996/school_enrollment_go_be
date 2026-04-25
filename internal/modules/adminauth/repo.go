@@ -37,7 +37,7 @@ func (r *repository) FindByUsername(username string) (*database.AdminUser, error
 
 func (r *repository) FindByID(id int64) (*database.AdminUser, error) {
 	var admin database.AdminUser
-	if err := r.db.First(&admin, "id = ?", id).Error; err != nil {
+	if err := r.db.Preload("RoleGroups.Permissions").First(&admin, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrAdminNotFound
 		}

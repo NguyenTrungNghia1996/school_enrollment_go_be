@@ -37,6 +37,7 @@ func RegisterRoutes(app *fiber.App, cfg *config.Config, db *database.Database) {
 	group := app.Group(adminAuthPrefix)
 	group.Post("/login", handler.Login)
 	group.Get("/me", middleware.RequireAdminAuth(cfg), handler.Me)
+	group.Get("/permissions", middleware.RequireAdminAuth(cfg), handler.Permissions)
 }
 
 func (h *Handler) Login(c *fiber.Ctx) error {
@@ -79,4 +80,25 @@ func (h *Handler) Me(c *fiber.Ctx) error {
 	}
 
 	return common.Success(c, fiber.StatusOK, "Fetched admin profile successfully", admin)
+}
+
+func (h *Handler) Permissions(c *fiber.Ctx) error {
+	claims, ok := middleware.AdminClaimsFromContext(c)
+	if !ok || claims == nil {
+		return common.Error(c, fiber.StatusUnauthorized, common.NewError("INVALID_TOKEN", "admin token is invalid", nil))
+	}
+
+	permissions, err := h.service.Permissions(claims.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrAdminInactive):
+			return common.Error(c, fiber.StatusForbidden, common.NewError("ADMIN_INACTIVE", "admin account is inactive", nil))
+		case errors.Is(err, ErrAdminNotFound):
+			return common.Error(c, fiber.StatusUnauthorized, common.NewError("ADMIN_NOT_FOUND", "admin account was not found", nil))
+		default:
+			return common.Error(c, fiber.StatusInternalServerError, common.NewError("GET_ADMIN_PERMISSIONS_FAILED", "failed to fetch admin permissions", nil))
+		}
+	}
+
+	return common.Success(c, fiber.StatusOK, "Fetched admin permissions successfully", permissions)
 }

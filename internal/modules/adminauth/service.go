@@ -3,6 +3,7 @@ package adminauth
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"school_enrollment_be/internal/common/security"
@@ -19,6 +20,7 @@ var (
 type Service interface {
 	Login(username, password string) (*LoginResult, error)
 	Me(id int64) (*AdminProfile, error)
+	Permissions(id int64) ([]PermissionSummary, error)
 }
 
 type service struct {
@@ -40,6 +42,11 @@ type AdminProfile struct {
 	PhoneNumber  *string `json:"phone_number,omitempty"`
 	IsSuperAdmin bool    `json:"is_super_admin"`
 	IsActive     bool    `json:"is_active"`
+}
+
+type PermissionSummary struct {
+	PermissionKey   string `json:"permission_key"`
+	PermissionValue int64  `json:"permission_value"`
 }
 
 func NewService(repo Repository, passwordHasher security.PasswordHasher, jwtService security.AdminJWTService) Service {
@@ -90,6 +97,38 @@ func (s *service) Me(id int64) (*AdminProfile, error) {
 
 	profile := toAdminProfile(admin)
 	return &profile, nil
+}
+
+func (s *service) Permissions(id int64) ([]PermissionSummary, error) {
+	admin, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if !admin.IsActive {
+		return nil, ErrAdminInactive
+	}
+
+	merged := make(map[string]int64)
+	for _, roleGroup := range admin.RoleGroups {
+		for _, permission := range roleGroup.Permissions {
+			merged[permission.PermissionKey] |= permission.PermissionValue
+		}
+	}
+
+	items := make([]PermissionSummary, 0, len(merged))
+	for key, value := range merged {
+		items = append(items, PermissionSummary{
+			PermissionKey:   key,
+			PermissionValue: value,
+		})
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].PermissionKey < items[j].PermissionKey
+	})
+
+	return items, nil
 }
 
 func toAdminProfile(admin *database.AdminUser) AdminProfile {
