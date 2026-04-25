@@ -1,4 +1,4 @@
-package adminauth
+package userauth
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"school_enrollment_be/internal/middleware"
 )
 
-const adminAuthPrefix = "/api/v1/admin/auth"
+const userAuthPrefix = "/api/v1/user/auth"
 
 type Handler struct {
 	service Service
@@ -30,13 +30,13 @@ func NewHandler(service Service) *Handler {
 func RegisterRoutes(app *fiber.App, cfg *config.Config, db *database.Database) {
 	repo := NewRepository(db)
 	passwordHasher := security.NewPasswordHasher(0)
-	jwtService := security.NewAdminJWTService(cfg.Auth.AdminJWT)
+	jwtService := security.NewUserJWTService(cfg.Auth.UserJWT)
 	service := NewService(repo, passwordHasher, jwtService)
 	handler := NewHandler(service)
 
-	group := app.Group(adminAuthPrefix)
+	group := app.Group(userAuthPrefix)
 	group.Post("/login", handler.Login)
-	group.Get("/me", middleware.RequireAdminAuth(cfg), handler.Me)
+	group.Get("/me", middleware.RequireUserAuth(cfg), handler.Me)
 }
 
 func (h *Handler) Login(c *fiber.Ctx) error {
@@ -50,33 +50,33 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, ErrInvalidCredentials):
 			return common.Error(c, fiber.StatusUnauthorized, common.NewError("INVALID_CREDENTIALS", "username or password is incorrect", nil))
-		case errors.Is(err, ErrAdminInactive):
-			return common.Error(c, fiber.StatusForbidden, common.NewError("ADMIN_INACTIVE", "admin account is inactive", nil))
+		case errors.Is(err, ErrUserInactive):
+			return common.Error(c, fiber.StatusForbidden, common.NewError("USER_INACTIVE", "user account is inactive", nil))
 		default:
-			return common.Error(c, fiber.StatusInternalServerError, common.NewError("ADMIN_LOGIN_FAILED", "admin login failed", nil))
+			return common.Error(c, fiber.StatusInternalServerError, common.NewError("USER_LOGIN_FAILED", "user login failed", nil))
 		}
 	}
 
-	return common.Success(c, fiber.StatusOK, "Admin login successful", result)
+	return common.Success(c, fiber.StatusOK, "User login successful", result)
 }
 
 func (h *Handler) Me(c *fiber.Ctx) error {
-	claims, ok := middleware.AdminClaimsFromContext(c)
+	claims, ok := middleware.UserClaimsFromContext(c)
 	if !ok || claims == nil {
-		return common.Error(c, fiber.StatusUnauthorized, common.NewError("INVALID_TOKEN", "admin token is invalid", nil))
+		return common.Error(c, fiber.StatusUnauthorized, common.NewError("INVALID_TOKEN", "user token is invalid", nil))
 	}
 
-	admin, err := h.service.Me(claims.ID)
+	user, err := h.service.Me(claims.ID)
 	if err != nil {
 		switch {
-		case errors.Is(err, ErrAdminInactive):
-			return common.Error(c, fiber.StatusForbidden, common.NewError("ADMIN_INACTIVE", "admin account is inactive", nil))
-		case errors.Is(err, ErrAdminNotFound):
-			return common.Error(c, fiber.StatusUnauthorized, common.NewError("ADMIN_NOT_FOUND", "admin account was not found", nil))
+		case errors.Is(err, ErrUserInactive):
+			return common.Error(c, fiber.StatusForbidden, common.NewError("USER_INACTIVE", "user account is inactive", nil))
+		case errors.Is(err, ErrUserNotFound):
+			return common.Error(c, fiber.StatusUnauthorized, common.NewError("USER_NOT_FOUND", "user account was not found", nil))
 		default:
-			return common.Error(c, fiber.StatusInternalServerError, common.NewError("GET_ADMIN_PROFILE_FAILED", "failed to fetch admin profile", nil))
+			return common.Error(c, fiber.StatusInternalServerError, common.NewError("GET_USER_PROFILE_FAILED", "failed to fetch user profile", nil))
 		}
 	}
 
-	return common.Success(c, fiber.StatusOK, "Fetched admin profile successfully", admin)
+	return common.Success(c, fiber.StatusOK, "Fetched user profile successfully", user)
 }

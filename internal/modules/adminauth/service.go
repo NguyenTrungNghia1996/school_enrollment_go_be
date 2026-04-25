@@ -18,7 +18,7 @@ var (
 
 type Service interface {
 	Login(username, password string) (*LoginResult, error)
-	Me(token string) (*AdminProfile, error)
+	Me(id int64) (*AdminProfile, error)
 }
 
 type service struct {
@@ -78,13 +78,8 @@ func (s *service) Login(username, password string) (*LoginResult, error) {
 	}, nil
 }
 
-func (s *service) Me(token string) (*AdminProfile, error) {
-	claims, err := s.jwtService.ParseToken(token)
-	if err != nil {
-		return nil, ErrInvalidToken
-	}
-
-	admin, err := s.repo.FindByID(claims.ID)
+func (s *service) Me(id int64) (*AdminProfile, error) {
+	admin, err := s.repo.FindByID(id)
 	if err != nil {
 		return nil, err
 	}

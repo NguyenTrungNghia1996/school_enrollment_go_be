@@ -104,7 +104,7 @@ func TestServiceLoginRejectInactiveAdmin(t *testing.T) {
 	}
 }
 
-func TestServiceMeRejectsUserToken(t *testing.T) {
+func TestServiceMeRejectsInactiveAdmin(t *testing.T) {
 	passwordHasher := security.NewPasswordHasher(0)
 	repo := &fakeRepository{
 		adminByUsername: map[string]*database.AdminUser{},
@@ -114,7 +114,7 @@ func TestServiceMeRejectsUserToken(t *testing.T) {
 				Username:     "admin",
 				PasswordHash: "hashed",
 				FullName:     "Admin",
-				IsActive:     true,
+				IsActive:     false,
 			},
 		},
 	}
@@ -125,13 +125,8 @@ func TestServiceMeRejectsUserToken(t *testing.T) {
 		security.NewAdminJWTService(config.JWTConfig{Secret: "shared-secret", ExpiresIn: time.Hour}),
 	)
 
-	userToken, err := security.NewUserJWTService(config.JWTConfig{Secret: "shared-secret", ExpiresIn: time.Hour}).GenerateToken(1)
-	if err != nil {
-		t.Fatalf("GenerateToken() error = %v", err)
-	}
-
-	_, err = service.Me(userToken)
-	if !errors.Is(err, ErrInvalidToken) {
-		t.Fatalf("Me() error = %v, want %v", err, ErrInvalidToken)
+	_, err := service.Me(1)
+	if !errors.Is(err, ErrAdminInactive) {
+		t.Fatalf("Me() error = %v, want %v", err, ErrAdminInactive)
 	}
 }

@@ -9,6 +9,8 @@ servers:
 tags:
   - name: Admin Auth
     description: Authentication endpoints for admin users
+  - name: User Auth
+    description: Authentication endpoints for end users
   - name: Health
     description: Service health check endpoints
 paths:
@@ -93,6 +95,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/user/auth/login:
+    post:
+      tags:
+        - User Auth
+      summary: User login
+      description: Authenticate a user with username and password.
+      operationId: userLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginRequest'
+            example:
+              username: student01
+              password: secret123
+      responses:
+        '200':
+          description: User login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserLoginSuccessResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/user/auth/me:
+    get:
+      tags:
+        - User Auth
+      summary: Get current user profile
+      description: Retrieve the current authenticated user profile from a user bearer token.
+      operationId: getUserMe
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserMeSuccessResponse'
+        '401':
+          description: Missing or invalid user token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: User account is inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/health:
     get:
       tags:
@@ -135,6 +218,18 @@ components:
         password:
           type: string
           example: admin
+      required:
+        - username
+        - password
+    UserLoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: student01
+        password:
+          type: string
+          example: secret123
       required:
         - username
         - password
@@ -247,6 +342,76 @@ components:
           example: Fetched admin profile successfully
         data:
           $ref: '#/components/schemas/AdminProfile'
+      required:
+        - success
+        - message
+        - data
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        username:
+          type: string
+          example: student01
+        full_name:
+          type: string
+          example: Nguyen Van A
+        email:
+          type: string
+          nullable: true
+          example: student01@example.com
+        phone_number:
+          type: string
+          nullable: true
+          example: "0900000001"
+        is_active:
+          type: boolean
+          example: true
+      required:
+        - id
+        - username
+        - full_name
+        - is_active
+    UserLoginData:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        user:
+          $ref: '#/components/schemas/UserProfile'
+      required:
+        - access_token
+        - user
+    UserLoginSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: User login successful
+        data:
+          $ref: '#/components/schemas/UserLoginData'
+      required:
+        - success
+        - message
+        - data
+    UserMeSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Fetched user profile successfully
+        data:
+          $ref: '#/components/schemas/UserProfile'
       required:
         - success
         - message
