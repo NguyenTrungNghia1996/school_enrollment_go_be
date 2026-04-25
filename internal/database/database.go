@@ -24,11 +24,15 @@ type Database struct {
 
 func New(cfg *config.Config) (*Database, error) {
 	db, err := gorm.Open(postgres.Open(buildDSN(cfg)), &gorm.Config{
-		DisableForeignKeyConstraintWhenMigrating: true,
+		DisableForeignKeyConstraintWhenMigrating: false,
 		Logger:                                   newLogger(cfg.App.Env),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("open postgres connection: %w", err)
+	}
+
+	if err := registerAssociations(db); err != nil {
+		return nil, fmt.Errorf("register database associations: %w", err)
 	}
 
 	sqlDB, err := db.DB()
@@ -55,6 +59,18 @@ func New(cfg *config.Config) (*Database, error) {
 	}
 
 	return database, nil
+}
+
+func registerAssociations(db *gorm.DB) error {
+	if err := db.SetupJoinTable(&AdminUser{}, "RoleGroups", &AdminUserRoleGroup{}); err != nil {
+		return err
+	}
+
+	if err := db.SetupJoinTable(&RoleGroup{}, "AdminUsers", &AdminUserRoleGroup{}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *Database) DB() *gorm.DB {

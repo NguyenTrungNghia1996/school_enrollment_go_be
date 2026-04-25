@@ -3,16 +3,17 @@ package database
 import "time"
 
 type AdminUser struct {
-	ID           int64     `gorm:"column:id;primaryKey;autoIncrement"`
-	Username     string    `gorm:"column:username;type:varchar(50);not null;uniqueIndex"`
-	PasswordHash string    `gorm:"column:password_hash;type:varchar(255);not null"`
-	FullName     string    `gorm:"column:full_name;type:varchar(100);not null"`
-	Email        *string   `gorm:"column:email;type:varchar(100);uniqueIndex"`
-	PhoneNumber  *string   `gorm:"column:phone_number;type:varchar(20)"`
-	IsSuperAdmin bool      `gorm:"column:is_super_admin;not null;default:false;index"`
-	IsActive     bool      `gorm:"column:is_active;not null;default:true;index"`
-	CreatedAt    time.Time `gorm:"column:created_at;not null;default:now()"`
-	UpdatedAt    time.Time `gorm:"column:updated_at;not null;default:now()"`
+	ID           int64       `gorm:"column:id;primaryKey;autoIncrement"`
+	Username     string      `gorm:"column:username;type:varchar(50);not null;uniqueIndex"`
+	PasswordHash string      `gorm:"column:password_hash;type:varchar(255);not null"`
+	FullName     string      `gorm:"column:full_name;type:varchar(100);not null"`
+	Email        *string     `gorm:"column:email;type:varchar(100);uniqueIndex"`
+	PhoneNumber  *string     `gorm:"column:phone_number;type:varchar(20)"`
+	IsSuperAdmin bool        `gorm:"column:is_super_admin;not null;default:false;index"`
+	IsActive     bool        `gorm:"column:is_active;not null;default:true;index"`
+	CreatedAt    time.Time   `gorm:"column:created_at;not null;default:now()"`
+	UpdatedAt    time.Time   `gorm:"column:updated_at;not null;default:now()"`
+	RoleGroups   []RoleGroup `gorm:"many2many:admin_user_role_groups;joinForeignKey:AdminUserID;joinReferences:RoleGroupID"`
 }
 
 func (AdminUser) TableName() string {
@@ -20,13 +21,15 @@ func (AdminUser) TableName() string {
 }
 
 type RoleGroup struct {
-	ID          int64     `gorm:"column:id;primaryKey;autoIncrement"`
-	Code        string    `gorm:"column:code;type:varchar(50);not null;uniqueIndex"`
-	Name        string    `gorm:"column:name;type:varchar(100);not null"`
-	Description *string   `gorm:"column:description;type:text"`
-	IsActive    bool      `gorm:"column:is_active;not null;default:true;index"`
-	CreatedAt   time.Time `gorm:"column:created_at;not null;default:now()"`
-	UpdatedAt   time.Time `gorm:"column:updated_at;not null;default:now()"`
+	ID          int64                 `gorm:"column:id;primaryKey;autoIncrement"`
+	Code        string                `gorm:"column:code;type:varchar(50);not null;uniqueIndex"`
+	Name        string                `gorm:"column:name;type:varchar(100);not null"`
+	Description *string               `gorm:"column:description;type:text"`
+	IsActive    bool                  `gorm:"column:is_active;not null;default:true;index"`
+	CreatedAt   time.Time             `gorm:"column:created_at;not null;default:now()"`
+	UpdatedAt   time.Time             `gorm:"column:updated_at;not null;default:now()"`
+	AdminUsers  []AdminUser           `gorm:"many2many:admin_user_role_groups;joinForeignKey:RoleGroupID;joinReferences:AdminUserID"`
+	Permissions []RoleGroupPermission `gorm:"foreignKey:RoleGroupID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 func (RoleGroup) TableName() string {
@@ -37,6 +40,8 @@ type AdminUserRoleGroup struct {
 	AdminUserID int64     `gorm:"column:admin_user_id;primaryKey;not null"`
 	RoleGroupID int64     `gorm:"column:role_group_id;primaryKey;not null"`
 	CreatedAt   time.Time `gorm:"column:created_at;not null;default:now()"`
+	AdminUser   AdminUser `gorm:"foreignKey:AdminUserID;references:ID;constraint:OnDelete:CASCADE"`
+	RoleGroup   RoleGroup `gorm:"foreignKey:RoleGroupID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 func (AdminUserRoleGroup) TableName() string {
@@ -49,6 +54,7 @@ type RoleGroupPermission struct {
 	PermissionValue int64     `gorm:"column:permission_value;not null;default:0"`
 	CreatedAt       time.Time `gorm:"column:created_at;not null;default:now()"`
 	UpdatedAt       time.Time `gorm:"column:updated_at;not null;default:now()"`
+	RoleGroup       RoleGroup `gorm:"foreignKey:RoleGroupID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 func (RoleGroupPermission) TableName() string {
