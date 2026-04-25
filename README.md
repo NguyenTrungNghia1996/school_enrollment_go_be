@@ -77,29 +77,42 @@ Kỳ vọng:
   "success": true,
   "message": "Service is healthy",
   "data": {
-    "app": "school-enrollment-be",
-    "environment": "local",
-    "status": "ok",
-    "time": "2026-04-24T00:00:00Z"
+    "app": {
+      "name": "school-enrollment-be",
+      "environment": "local",
+      "status": "ok",
+      "time": "2026-04-24T00:00:00Z"
+    },
+    "db": {
+      "status": "ok"
+    }
   }
 }
 ```
 
 ## Migration
 
-Thư mục `migrations/` được tạo sẵn để dùng với `golang-migrate`. Skeleton này không tự tạo hay chỉnh sửa schema SQL.
+Migration đầu tiên đã có sẵn trong `migrations/`:
 
-Ví dụ tạo migration mới:
+- `000001_init_admin_schema.up.sql`
+- `000001_init_admin_schema.down.sql`
+
+Cài CLI:
 
 ```bash
 go install github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-migrate create -ext sql -dir migrations -seq create_students_table
 ```
 
-Ví dụ chạy migration:
+Chạy migrate up:
 
 ```bash
 migrate -path migrations -database "postgres://postgres:postgres@localhost:5432/school_enrollment?sslmode=disable" up
+```
+
+Chạy migrate down 1 version:
+
+```bash
+migrate -path migrations -database "postgres://postgres:postgres@localhost:5432/school_enrollment?sslmode=disable" down 1
 ```
 
 ## API hiện có
