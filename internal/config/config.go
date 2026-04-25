@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,164 +11,150 @@ import (
 )
 
 type Config struct {
-	App        AppConfig
-	API        APIConfig
-	Database   DatabaseConfig
-	JWT        JWTConfig
-	Log        LogConfig
-	CORS       CORSConfig
-	Migrations MigrationConfig
+	App      AppConfig
+	Database DatabaseConfig
+	Auth     AuthConfig
+	CORS     CORSConfig
 }
 
 type AppConfig struct {
-	Name            string
-	Env             string
-	Port            string
-	ReadTimeout     time.Duration
-	WriteTimeout    time.Duration
-	IdleTimeout     time.Duration
-	ShutdownTimeout time.Duration
-}
-
-type APIConfig struct {
-	Prefix string
+	Name     string
+	Env      string
+	Port     string
+	Timezone string
+	Location *time.Location
 }
 
 type DatabaseConfig struct {
-	Host            string
-	Port            string
-	User            string
-	Password        string
-	Name            string
-	SSLMode         string
-	TimeZone        string
-	MaxIdleConns    int
-	MaxOpenConns    int
-	ConnMaxLifetime time.Duration
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Name     string
+	SSLMode  string
+}
+
+type AuthConfig struct {
+	AdminJWT JWTConfig
+	UserJWT  JWTConfig
 }
 
 type JWTConfig struct {
 	Secret    string
-	Issuer    string
 	ExpiresIn time.Duration
-}
-
-type LogConfig struct {
-	Level string
 }
 
 type CORSConfig struct {
 	AllowOrigins string
-	AllowHeaders string
-	AllowMethods string
-}
-
-type MigrationConfig struct {
-	Path string
 }
 
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
+	var validationErrors []string
+
+	timezone := requiredEnv("APP_TIMEZONE", &validationErrors)
+	location := parseLocation("APP_TIMEZONE", timezone, &validationErrors)
+
 	cfg := &Config{
 		App: AppConfig{
-			Name:            getEnv("APP_NAME", "school-enrollment-be"),
-			Env:             getEnv("APP_ENV", "local"),
-			Port:            getEnv("APP_PORT", "8080"),
-			ReadTimeout:     getDurationEnv("APP_READ_TIMEOUT", 10*time.Second),
-			WriteTimeout:    getDurationEnv("APP_WRITE_TIMEOUT", 10*time.Second),
-			IdleTimeout:     getDurationEnv("APP_IDLE_TIMEOUT", 30*time.Second),
-			ShutdownTimeout: getDurationEnv("APP_SHUTDOWN_TIMEOUT", 10*time.Second),
-		},
-		API: APIConfig{
-			Prefix: getEnv("API_PREFIX", "/api/v1"),
+			Name:     requiredEnv("APP_NAME", &validationErrors),
+			Env:      requiredEnv("APP_ENV", &validationErrors),
+			Port:     requiredEnv("APP_PORT", &validationErrors),
+			Timezone: timezone,
+			Location: location,
 		},
 		Database: DatabaseConfig{
-			Host:            getEnv("DB_HOST", "localhost"),
-			Port:            getEnv("DB_PORT", "5432"),
-			User:            getEnv("DB_USER", "postgres"),
-			Password:        getEnv("DB_PASSWORD", "postgres"),
-			Name:            getEnv("DB_NAME", "school_enrollment"),
-			SSLMode:         getEnv("DB_SSLMODE", "disable"),
-			TimeZone:        getEnv("DB_TIMEZONE", "Asia/Bangkok"),
-			MaxIdleConns:    getIntEnv("DB_MAX_IDLE_CONNS", 10),
-			MaxOpenConns:    getIntEnv("DB_MAX_OPEN_CONNS", 50),
-			ConnMaxLifetime: getDurationEnv("DB_CONN_MAX_LIFETIME", 30*time.Minute),
+			Host:     requiredEnv("DB_HOST", &validationErrors),
+			Port:     requiredEnv("DB_PORT", &validationErrors),
+			User:     requiredEnv("DB_USER", &validationErrors),
+			Password: requiredEnv("DB_PASSWORD", &validationErrors),
+			Name:     requiredEnv("DB_NAME", &validationErrors),
+			SSLMode:  requiredEnv("DB_SSLMODE", &validationErrors),
 		},
-		JWT: JWTConfig{
-			Secret:    getEnv("JWT_SECRET", "change-me"),
-			Issuer:    getEnv("JWT_ISSUER", "school-enrollment-be"),
-			ExpiresIn: getDurationEnv("JWT_EXPIRES_IN", 24*time.Hour),
-		},
-		Log: LogConfig{
-			Level: getEnv("LOG_LEVEL", "info"),
+		Auth: AuthConfig{
+			AdminJWT: JWTConfig{
+				Secret:    requiredEnv("ADMIN_JWT_SECRET", &validationErrors),
+				ExpiresIn: requiredDuration("ADMIN_JWT_EXPIRES_IN", &validationErrors),
+			},
+			UserJWT: JWTConfig{
+				Secret:    requiredEnv("USER_JWT_SECRET", &validationErrors),
+				ExpiresIn: requiredDuration("USER_JWT_EXPIRES_IN", &validationErrors),
+			},
 		},
 		CORS: CORSConfig{
-			AllowOrigins: getEnv("CORS_ALLOW_ORIGINS", "*"),
-			AllowHeaders: getEnv("CORS_ALLOW_HEADERS", "Origin,Content-Type,Accept,Authorization"),
-			AllowMethods: getEnv("CORS_ALLOW_METHODS", "GET,POST,PUT,PATCH,DELETE,OPTIONS"),
-		},
-		Migrations: MigrationConfig{
-			Path: getEnv("MIGRATIONS_PATH", "file://migrations"),
+			AllowOrigins: requiredEnv("CORS_ALLOW_ORIGINS", &validationErrors),
 		},
 	}
 
 	if err := cfg.Validate(); err != nil {
-		return nil, err
+		validationErrors = append(validationErrors, err.Error())
+	}
+
+	if len(validationErrors) > 0 {
+		return nil, fmt.Errorf("invalid config: %s", strings.Join(validationErrors, "; "))
 	}
 
 	return cfg, nil
 }
 
 func (c *Config) Validate() error {
-	if strings.TrimSpace(c.App.Port) == "" {
-		return fmt.Errorf("APP_PORT is required")
+	var validationErrors []string
+
+	if _, err := fmt.Sscanf(c.App.Port, "%d", new(int)); err != nil {
+		validationErrors = append(validationErrors, "APP_PORT must be a valid integer")
 	}
 
-	if strings.TrimSpace(c.Database.Host) == "" {
-		return fmt.Errorf("DB_HOST is required")
+	if _, err := fmt.Sscanf(c.Database.Port, "%d", new(int)); err != nil {
+		validationErrors = append(validationErrors, "DB_PORT must be a valid integer")
 	}
 
-	if strings.TrimSpace(c.Database.Name) == "" {
-		return fmt.Errorf("DB_NAME is required")
+	if strings.TrimSpace(c.CORS.AllowOrigins) == "" {
+		validationErrors = append(validationErrors, "CORS_ALLOW_ORIGINS is required")
+	}
+
+	if len(validationErrors) > 0 {
+		return errors.New(strings.Join(validationErrors, "; "))
 	}
 
 	return nil
 }
 
-func getEnv(key, fallback string) string {
+func requiredEnv(key string, validationErrors *[]string) string {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
-		return fallback
+		*validationErrors = append(*validationErrors, fmt.Sprintf("%s is required", key))
+		return ""
 	}
 
 	return value
 }
 
-func getIntEnv(key string, fallback int) int {
-	value := strings.TrimSpace(os.Getenv(key))
+func requiredDuration(key string, validationErrors *[]string) time.Duration {
+	value := requiredEnv(key, validationErrors)
 	if value == "" {
-		return fallback
+		return 0
 	}
 
-	var parsed int
-	if _, err := fmt.Sscanf(value, "%d", &parsed); err != nil {
-		return fallback
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		*validationErrors = append(*validationErrors, fmt.Sprintf("%s must be a valid duration", key))
+		return 0
 	}
 
-	return parsed
+	return duration
 }
 
-func getDurationEnv(key string, fallback time.Duration) time.Duration {
-	value := strings.TrimSpace(os.Getenv(key))
-	if value == "" {
-		return fallback
+func parseLocation(key, value string, validationErrors *[]string) *time.Location {
+	if strings.TrimSpace(value) == "" {
+		return time.UTC
 	}
 
-	parsed, err := time.ParseDuration(value)
+	location, err := time.LoadLocation(value)
 	if err != nil {
-		return fallback
+		*validationErrors = append(*validationErrors, fmt.Sprintf("%s must be a valid IANA timezone", key))
+		return time.UTC
 	}
 
-	return parsed
+	return location
 }

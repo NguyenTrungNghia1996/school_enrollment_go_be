@@ -10,6 +10,8 @@ import (
 	"school_enrollment_be/internal/config"
 )
 
+const migrationsPath = "file://migrations"
+
 type Migrator interface {
 	Up() error
 	Down() error
@@ -27,7 +29,7 @@ func NewMigrator(cfg *config.Config) (*migrate.Migrate, error) {
 		cfg.Database.SSLMode,
 	)
 
-	m, err := migrate.New(cfg.Migrations.Path, dsn)
+	m, err := migrate.New(migrationsPath, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("create migrator: %w", err)
 	}

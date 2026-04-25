@@ -12,6 +12,11 @@ import (
 	"school_enrollment_be/internal/config"
 )
 
+const (
+	defaultCORSAllowHeaders = "Origin,Content-Type,Accept,Authorization"
+	defaultCORSAllowMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+)
+
 func Register(app *fiber.App, logger *slog.Logger, cfg *config.Config) {
 	app.Use(fiberrecover.New(fiberrecover.Config{
 		EnableStackTrace: cfg.App.Env != "production",
@@ -21,8 +26,8 @@ func Register(app *fiber.App, logger *slog.Logger, cfg *config.Config) {
 
 	app.Use(fibercors.New(fibercors.Config{
 		AllowOrigins: cfg.CORS.AllowOrigins,
-		AllowHeaders: cfg.CORS.AllowHeaders,
-		AllowMethods: cfg.CORS.AllowMethods,
+		AllowHeaders: defaultCORSAllowHeaders,
+		AllowMethods: defaultCORSAllowMethods,
 	}))
 }
 

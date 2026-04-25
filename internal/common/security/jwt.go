@@ -15,14 +15,12 @@ type JWTManager interface {
 
 type jwtManager struct {
 	secret    []byte
-	issuer    string
 	expiresIn time.Duration
 }
 
 func NewJWTManager(cfg config.JWTConfig) JWTManager {
 	return &jwtManager{
 		secret:    []byte(cfg.Secret),
-		issuer:    cfg.Issuer,
 		expiresIn: cfg.ExpiresIn,
 	}
 }
@@ -34,7 +32,6 @@ func (j *jwtManager) GenerateToken(subject string, claims jwt.MapClaims) (string
 
 	now := time.Now()
 	claims["sub"] = subject
-	claims["iss"] = j.issuer
 	claims["iat"] = now.Unix()
 	claims["exp"] = now.Add(j.expiresIn).Unix()
 

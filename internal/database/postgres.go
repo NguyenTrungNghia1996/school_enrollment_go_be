@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -19,7 +20,7 @@ func NewPostgres(cfg *config.Config) (*gorm.DB, error) {
 		cfg.Database.Password,
 		cfg.Database.Name,
 		cfg.Database.SSLMode,
-		cfg.Database.TimeZone,
+		cfg.App.Timezone,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
@@ -35,9 +36,9 @@ func NewPostgres(cfg *config.Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("get sql db from gorm: %w", err)
 	}
 
-	sqlDB.SetMaxIdleConns(cfg.Database.MaxIdleConns)
-	sqlDB.SetMaxOpenConns(cfg.Database.MaxOpenConns)
-	sqlDB.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(50)
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
 
 	if err := sqlDB.Ping(); err != nil {
 		return nil, fmt.Errorf("ping postgres: %w", err)
